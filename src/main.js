@@ -5,25 +5,15 @@
  * @returns {number}
  */
 function calculateSimpleRevenue(purchase, _product) {
-  // Получаем данные из purchase
-  const { discount, sale_price, quantity } = purchase;
-
-  // Если каких-то данных нет, возвращаем 0
-  if (
-    discount === undefined ||
-    sale_price === undefined ||
-    quantity === undefined
-  ) {
-    return 0;
-  }
-
-  // Переводим скидку из процентов в десятичное число
-  const discountDecimal = discount / 100;
-
-  // Рассчитываем выручку: цена * количество * (1 - скидка)
-  const revenue = sale_price * quantity * (1 - discountDecimal);
-
-  return revenue;
+ // purchase — это одна из записей в поле items из чека в data.purchase_records
+    // _product — это продукт из коллекции data.products
+    const { discount: discountPercent, sale_price, quantity } = purchase;
+    
+// Рассчитываем коэффициент скидки
+    const discountMultiplier = 1 - (discountPercent / 100);
+    
+    // Возвращаем выручку по формуле
+    return sale_price * quantity * discountMultiplier;
 }
 
 /**
@@ -39,17 +29,17 @@ function calculateBonusByProfit(index, total, seller) {
   // Определяем процент бонуса в зависимости от позиции в рейтинге
   let bonusPercentage;
 
-  if (index === 1) {
-    // Первое место - 15%
+  if (index === 0) {
+    // Первое место - 15% (индекс 0)
     bonusPercentage = 0.15;
-  } else if (index === 2 || index === 3) {
-    // Второе и третье место - 10%
+  } else if (index === 1 || index === 2) {
+    // Второе и третье место - 10% (индексы 1 и 2)
     bonusPercentage = 0.1;
-  } else if (index === total) {
-    // Последнее место - 0%
+  } else if (index === total - 1) {
+    // Последнее место - 0% (последний индекс в массиве)
     bonusPercentage = 0;
   } else {
-    // Все остальные (кроме последнего) - 5%
+    // Все остальные - 5%
     bonusPercentage = 0.05;
   }
 
@@ -223,7 +213,7 @@ function analyzeSalesData(data, options) {
   sellerStats.forEach((seller, index) => {
     // Рассчитываем бонус на основе позиции в рейтинге
     // index - позиция в массиве (0 - первое место)
-    seller.bonus = calculateBonus(index + 1, totalSellers, seller);
+    seller.bonus = calculateBonus(index, totalSellers, seller);
 
     // Формируем топ-10 проданных продуктов
     // Преобразуем объект products_sold в массив и сортируем
@@ -246,4 +236,36 @@ function analyzeSalesData(data, options) {
     top_products: seller.top_products, // Топ-10 товаров
     bonus: +seller.bonus.toFixed(2), // Бонус с 2 знаками после запятой
   }));
+
+   const result = sellerStats.map((seller) => ({
+    seller_id: seller.id,
+    name: `${seller.firstName} ${seller.lastName}`,
+    revenue: +seller.revenue.toFixed(2),
+    profit: +seller.profit.toFixed(2),
+    sales_count: seller.totalSales,
+    top_products: seller.top_products,
+    bonus: +seller.bonus.toFixed(2),
+  }));
+
+  // ВЫВОД ТАБЛИЦЫ В КОНСОЛЬ ДЛЯ ОТЛАДКИ
+  console.log('\n=== ТАБЛИЦА ПРОДАВЦОВ ===');
+  console.table(result.map(s => ({
+    'ID': s.seller_id,
+    'Имя': s.name,
+    'Выручка': s.revenue,
+    'Прибыль': s.profit,
+    'Продажи': s.sales_count,
+    'Бонус': s.bonus
+  })));
+
+  // Выводим также детали по каждому продавцу
+  console.log('\n=== ДЕТАЛИЗАЦИЯ ПО ПРОДАВЦАМ ===');
+  sellerStats.forEach((seller, index) => {
+    console.log(`\n[${index + 1}] ${seller.firstName} ${seller.lastName}:`);
+    console.log(`  Прибыль: ${seller.profit.toFixed(2)}`);
+    console.log(`  Бонус (%): ${calculateBonus(index, totalSellers, seller) / seller.profit * 100 || 0}%`);
+    console.log(`  Рассчитанный бонус: ${seller.bonus.toFixed(2)}`);
+  });
+
+  return result;
 }
