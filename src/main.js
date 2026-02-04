@@ -13,7 +13,7 @@ function calculateSimpleRevenue(purchase, _product) {
     const discountMultiplier = 1 - (discountPercent / 100);
     
     // Возвращаем выручку по формуле
-    return sale_price * quantity * discountMultiplier;
+    return Math.round(sale_price * quantity * discountMultiplier * 100) / 100;
 }
 
 /**
